@@ -3,29 +3,39 @@ import re
 def ScoreInMap(file):
 	
 	totalScore = 0
-	
-	lastID = 0
-	
+		
 	mapa = open(file,'r')
 
-	x = 0	
+	x = 0
 
 	for line in mapa:
 		if x == 1:
+		
 			x = 2
 
 			a = re.split('=',line)
 			
-			averageScore = GetAverageScore(a[3])
+			averageScore = 1
 			
+			if len(a) > 2:
+				averageScore = GetAverageScore(a[3])
+			else:
+				averageScore = GetAverageScore(a[1])
 		elif  x == 2:
 			x = 0
-
+			cantidad = 0
 			a = re.split('=',line)
-			cantidad = int(GetNumbers(a[3]))
+			if re.match('(TIMEBETWEENENEMIES.+)|(</Behaviou.+)',line):
+				cantidad = 5
+			else:
+				if len(a) > 2:
+					cantidad = int(GetNumbers(a[3]))
+				else:
+					cantidad = int(GetNumbers(a[1]))
 			totalScore = totalScore + cantidad * averageScore
 			print (' Se va a spawnear puntaje por '  + str(cantidad * averageScore))
-		elif re.match('<Behaviour name="ENEMIESSPAWNER">',line):
+			
+		elif re.match('(<Behaviour name="ENEMIESSPAWNER">)|(NombreBH=ENEMIESSP)',line):
 			print("se encontro un spawner. ")
 			x = 1
 			
@@ -37,7 +47,7 @@ def ScoreInMap(file):
 		elif re.match('IdPrefab=(-32|-82|-132|-129|-389|-463|-584|-593|-361|-740|-376)',line):
 			a = re.sub('[^0-9]','',line)
 			totalScore = totalScore + ScoreByIdVerbose(a)
-	
+	mapa.close()	
 	return totalScore
 
 def GetAverageScore(spawners):
@@ -124,24 +134,15 @@ def ScoreByIdVerbose(id):
 		
 	return score
 
-def Test():
-	score = ScoreInMap('E:\\BACKUP\\Python\\ContadorDeScore\\lvl0101.JpcMap')
-	print('El score maximo del nivel es ' + str(score))
-
-def Test2():
-	score = ScoreInMap('E:\\BACKUP\\Python\\ContadorDeScore\\lvl0127.JpcMap')
-	print('El score maximo del nivel es ' + str(score))
-
-def ReadMap(map):
+def ReadScore(map):
 	path = "C:\\MetalSoldiers2\\_editorproject\\BILLKILLEM\\Mapas\\lvl01"
 	if map < 10:
 		mapa = path + '0' + str(map) + '.jpcmap'
 	else:
 		mapa = path + str(map) + '.jpcmap'
 	return ScoreInMap(mapa)
-        
-
-def ReadAllMaps(cantidad):
+	
+def ReadAllScores(cantidad):
 
 	path = "C:\\MetalSoldiers2\\_editorproject\\BILLKILLEM\\Mapas\\lvl01"
 
@@ -150,16 +151,79 @@ def ReadAllMaps(cantidad):
 	mapasConScore = 'sep=,\n'
 	
 	for x in range(1,cantidad):
-
+		print("LEYENDO MAPA " + str(x))
 		if x < 10:
 		
 			mapa = path + '0' + str(x) + '.jpcmap'
 		else:
 			mapa = path + str(x) + '.jpcmap'
 		
-		score = ScoreInMap(mapa)
-		
+		score = ReadScore(mapa)
+
 		mapasConScore += str(x) + ',' + str(score) + '\n'
 		print(str(score) + ' puntaje en el mapa ' + str(cantidad))
 	resultado.write(mapasConScore)
 	resultado.close()
+
+def AddScore(map,goldScore,silverScore):
+	
+	print("Cambiando mapa numero " + str(map))
+
+	path = "C:\\MetalSoldiers2\\_editorproject\\BILLKILLEM\\Mapas\\lvl01"
+
+
+	if map < 10:
+		map = '0' + str(map) + '.JpcMap'
+	else:
+		map = str(map) + '.JpcMap'
+	
+	mapa = open (path + map,"r")
+
+	resultado = open('E:\\BACKUP\\Python\\ContadorDeScore\\Mapas\\lvl01'+ map,'w')
+
+	lvlText = ''
+	
+	for line in mapa:
+			if re.match('<Parameter type="0" name="SCORETOMEDAL01" value=".+',line):
+				print("Cambiando moneda de oro")
+				lvlText += '<Parameter type="0" name="SCORETOMEDAL01" value="' +  goldScore + '"/>\n'
+
+			elif re.match('<Parameter type="0" name="SCORETOMEDAL02" value=".+',line):
+				print("Cambiando moneda de plata")
+				lvlText += '<Parameter type="0" name="SCORETOMEDAL02" value="' + silverScore + '"/>\n'
+
+			else:
+					lvlText += line
+
+	resultado.write(lvlText)
+	mapa.close()
+	resultado.close()
+	
+
+def AddScoreAllMaps():
+
+
+	resultado = open("E:\\BACKUP\\Python\\ContadorDeScore\\resultado.csv", "r")
+
+	for line in resultado:
+		
+		data = re.split(";",line)
+		
+		AddScore(int(data[0]),GetNumbers(data[2]),GetNumbers(data[3]))
+	
+
+
+
+
+def Test():
+	score = ScoreInMap('E:\\BACKUP\\Python\\ContadorDeScore\\lvl0101.JpcMap')
+	print('El score maximo del nivel es ' + str(score))
+
+def Test2():
+	score = ScoreInMap('E:\\BACKUP\\Python\\ContadorDeScore\\lvl0127.JpcMap')
+	print('El score maximo del nivel es ' + str(score))
+
+def TestMedals():
+	AddScore(1,'100','500')
+	
+AddScoreAllMaps()
